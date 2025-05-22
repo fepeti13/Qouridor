@@ -1,0 +1,1 @@
+# UI class for Qouridor game
