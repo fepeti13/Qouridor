@@ -1,18 +1,3 @@
-# UI class for Qouridor game
-"""
-The board will have two parts:
--the squares, where we can actually step
--the walls
-"""
-
-#CODES
-PLAYER1 = 1
-PLAYER2 = 2
-EMPTY_SQUARE = 0
-EMPTY_WALL = 0
-WALL = 9
-
-
 import pygame
 from dataclasses import dataclass
 
@@ -25,41 +10,14 @@ class Wall:
 class Square:
     rect: pygame.Rect
 
-class BoardUI:
-    def __init__(self, N):
-        print("I started the project")
-        pygame.init()
-        
+class UIModel:
+    def __init__(self, N, BOARD_WIDTH):
         self.N = N
-        
-
-        SCREEN_WIDTH = 600
-        SCREEN_HEIGHT = SCREEN_WIDTH
-        
-        BOARD_SCREEN_RATIO = 3 / 5
-        TOP_LEFT_RATIO = 1 / 5
-
-        self.BOARD_WIDTH = SCREEN_WIDTH * BOARD_SCREEN_RATIO
-        
-        self.BASE_ELEMENT_N = N * 4 + (N - 1)                                                       #we want a broad_with which is divisible by the base element size
-        self.BASE_ELEMENT_WIDTH = self.BOARD_WIDTH // self.BASE_ELEMENT_N                           #so we will not have problems with pixels truncation
-        self.BOARD_WIDTH = self.BASE_ELEMENT_N * self.BASE_ELEMENT_WIDTH
-
-        self.BOARD_HEIGHT = self.BOARD_WIDTH
-
-        self.TOP_LEFT_POINT = (SCREEN_WIDTH * TOP_LEFT_RATIO, SCREEN_WIDTH * TOP_LEFT_RATIO)
-
-        #BLUE = (0, 120, 255)
-
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Quoridor Starter")
-
-        #pygame.draw.rect(self.screen, BLUE, (self.TOP_LEFT_POINT[0], self.TOP_LEFT_POINT[1], self.BOARD_HEIGHT, self.BOARD_WIDTH))
+        self.BOARD_WIDTH = BOARD_WIDTH
 
         self.compute_cordinates()
-        self.create_board(N)
-        self.show_board()
-        pass 
+        self.create_walls()
+        self.create_squares()
 
     def compute_cordinates(self):
         self.WALL_WIDTH_COUNT = self.N * 4 + (self.N - 1) 
@@ -95,8 +53,6 @@ class BoardUI:
 
         self.wall_widths.append(2 * self.WALL_WIDTH)
         self.wall_widths.append(2 * self.WALL_WIDTH)
-
-
 
     def create_walls(self, WN):
         
@@ -154,60 +110,3 @@ class BoardUI:
             self.squares.append(row)
 
         print(self.squares)
-
-    def create_board(self, N):
-        
-        self.create_walls(3*N - 1)
-        self.create_squares()
-
-    def show_board(self):
-        square_size = 60
-        square_x = 100
-        square_y = 100
-
-        WHITE = (255, 255, 255)
-        BLUE = (0, 120, 255)
-        RED = (255, 0, 255)
-        BROWN = (88, 57, 39)
-        GRAY = (100, 100, 100)
-
-        running = True
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-            self.screen.fill(WHITE)
-            for i in range(3*self.N - 1):
-                for j in range(3*self.N - 1):
-                    if self.walls[i][j] != None:
-                        pygame.draw.rect(self.screen, GRAY, self.walls[i][j].rect)
-
-            for i in range(self.N):
-                for j in range(self.N):
-                    pygame.draw.rect(self.screen, BROWN, self.squares[i][j].rect)
-
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
-
-
-        pygame.quit()
-        pass
-
-    def convert_input(self, matrix):
-        MN = 2*self.N -1
-
-        #check if walls are activated
-        for i in range(MN):
-            if i % 2 == 0:
-                for j in range(0, MN, 2):
-                    if matrix[i][j] == WALL:
-                        #activate the neccessary walls
-            else:
-                for j in range(MN):
-                    if matrix[i][j] == WALL:
-                        #activate the neccesary walls
-
-        
-
-board = BoardUI(5)
