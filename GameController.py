@@ -15,8 +15,13 @@ WALL = 9
 
 import pygame
 from dataclasses import dataclass
-import UIModel
-import GameView
+from UIModel import UIModel
+from GameView import GameView
+from LogicModel import LogicModel
+
+SCREEN_WIDTH = 600
+BOARD_SCREEN_RATIO = 3 / 5
+TOP_LEFT_RATIO = 1 / 5
 
 class GameController:
     def __init__(self, N):
@@ -24,17 +29,21 @@ class GameController:
         pygame.init()
         
         self.N = N
-        
 
-        SCREEN_WIDTH = 600
-        SCREEN_HEIGHT = SCREEN_WIDTH
+        self.compute_base_metrics()
+
+        self.ui_model = UIModel(N, self.BOARD_WIDTH, self.TOP_LEFT_POINT)
+        self.game_view = GameView(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         
-        BOARD_SCREEN_RATIO = 3 / 5
-        TOP_LEFT_RATIO = 1 / 5
+        self.start_game()
+
+    def compute_base_metrics(self):
+        self.SCREEN_WIDTH = SCREEN_WIDTH
+        self.SCREEN_HEIGHT = SCREEN_WIDTH
 
         self.BOARD_WIDTH = SCREEN_WIDTH * BOARD_SCREEN_RATIO
         
-        self.BASE_ELEMENT_N = N * 4 + (N - 1)                                                       #we want a broad_with which is divisible by the base element size
+        self.BASE_ELEMENT_N = self.N * 4 + (self.N - 1)                                                       #we want a broad_with which is divisible by the base element size
         self.BASE_ELEMENT_WIDTH = self.BOARD_WIDTH // self.BASE_ELEMENT_N                           #so we will not have problems with pixels truncation
         self.BOARD_WIDTH = self.BASE_ELEMENT_N * self.BASE_ELEMENT_WIDTH
 
@@ -42,50 +51,93 @@ class GameController:
 
         self.TOP_LEFT_POINT = (SCREEN_WIDTH * TOP_LEFT_RATIO, SCREEN_WIDTH * TOP_LEFT_RATIO)
 
-        UIboard = UIModel(N, self.BOARD_WIDTH)
-        gameView = GameView(SCREEN_WIDTH, SCREEN_HEIGHT)
+    def start_game(self):
+        #we need to initialize the matrix as empty
+        self.logic_model = LogicModel(self.N)
 
-        pass 
+        #render the window
+        self.show_board()
+        self.run_game()
 
-    def show_board(self):
-        square_size = 60
-        square_x = 100
-        square_y = 100
+        #I need to decide who starts (I will make a random fucntion for this)
+        #I should notify the user with a message
 
-        WHITE = (255, 255, 255)
-        BLUE = (0, 120, 255)
-        RED = (255, 0, 255)
-        BROWN = (88, 57, 39)
-        GRAY = (100, 100, 100)
+        #if bot starts
+            #run_game
 
+        #else
+            #waits for a move, returns the matrix
+            #run_game
+        pass
+
+
+    def run_game(self):
         running = True
-        clock = pygame.time.Clock()
+        clock = pygame.time.Clock
 
         while running:
-            running = self.handle_events()
+            #running = self.handle_events() #check if the window was not closed
 
-            self.update_game_state()
+            #sends the current matrix
+            #self.update_game_state()       #returns the matrix, with the modifications of the opponent
 
-            self.gameView.render_frame(self.UIBoard)
+            #transforms the matrix into ui_model
 
-            clock().tick(60)
+            #self.game_view.render_frame(self.ui_model)    #shows the modifications to the user
+
+            #makes the table active, is waiting for a move, returns the matrix
+
+
+            clock().tick(180)
 
         pygame.quit()
         pass
 
-    def convert_input(self, matrix):
-        MN = 2*self.N -1
+    def show_board(self):
+        self.convert_logic_to_ui()
+        self.game_view.render_frame(self.ui_model)
+
+    def convert_logic_to_ui(self):
+        SWN = 2*self.N -1
 
         #check if walls are activated
-        for i in range(MN):
+        for i in range(SWN):
             if i % 2 == 0:
-                for j in range(0, MN, 2):
-                    if matrix[i][j] == WALL:
+                for j in range(1, SWN, 2):
+                    if self.logic_model.matrix[i][j] == WALL:
                         #activate the neccessary walls
+                        #I need to tranform the indexes
+                        #ti = (i - 1) // 2 * 3 + 2
+                        
+
+                        ti = (i // 2) * 3
+                        tj = (j - 1) // 2 * 3 + 2
+                        #
+                        self.ui_model.walls[ti][tj].activated = True
+                        self.ui_model.walls[ti+1][tj].activated = True
+
+                        print('elso', i, j, ti, tj)
+                        pass
             else:
-                for j in range(MN):
-                    if matrix[i][j] == WALL:
+                for j in range(SWN):
+                    
+                    if self.logic_model.matrix[i][j] == WALL:
                         #activate the neccesary walls
+                        if j % 2 == 1:
+                            ti = (i - 1) // 2 * 3 + 2
+                            tj = (j - 1) // 2 * 3 + 2
+                            self.ui_model.walls[ti][tj].activated = True
+
+                            print('masodik', i, j, ti, tj)
+                            pass
+                        else:
+                            ti = (i - 1) // 2 * 3 + 2
+                            tj = (j // 2) * 3
+                            #tj = (j - 1) // 2 * 3 + 2
+                            self.ui_model.walls[ti][tj].activated = True
+                            self.ui_model.walls[ti][tj+1].activated = True
+
+                            print('harmadik', i, j, ti, tj)
 
         
 

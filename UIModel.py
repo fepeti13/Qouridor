@@ -5,18 +5,20 @@ from dataclasses import dataclass
 class Wall:
     rect: pygame.Rect
     position: str
+    activated: bool
 
 @dataclass
 class Square:
     rect: pygame.Rect
 
 class UIModel:
-    def __init__(self, N, BOARD_WIDTH):
+    def __init__(self, N, BOARD_WIDTH, TOP_LEFT_POINT):
         self.N = N
         self.BOARD_WIDTH = BOARD_WIDTH
+        self.TOP_LEFT_POINT = TOP_LEFT_POINT
 
         self.compute_cordinates()
-        self.create_walls()
+        self.create_walls(3 * N -1)
         self.create_squares()
 
     def compute_cordinates(self):
@@ -70,7 +72,7 @@ class UIModel:
                     width = self.wall_widths[wall_ind_x]
                     height = self.WALL_WIDTH
                     rect = pygame.Rect(x, y, width, height)
-                    wall = Wall(rect, "border-up")
+                    wall = Wall(rect, "border-up", False)
                     row.append(wall)
 
                     wall_ind_x += 1
@@ -84,7 +86,7 @@ class UIModel:
                         width = self.WALL_WIDTH
                         height = 2 * self.WALL_WIDTH
                         rect = pygame.Rect(x, y, width, height)
-                        wall = Wall(rect, "border-up")
+                        wall = Wall(rect, "border-up", False)
                         row.append(wall)
                     else: row.append(None)
                     wall_ind_x += 1
@@ -109,4 +111,4 @@ class UIModel:
                 row.append(square)
             self.squares.append(row)
 
-        print(self.squares)
+        #print(self.squares)
