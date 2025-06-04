@@ -15,16 +15,12 @@ class LogicModel:
             self.matrix.append(row)
 
         
-        self.player1 = None
-        self.player2 = None
+        self.player1 = None  
+        self.player2 = None  
         
         
         self.my_walls_count = M
         self.opponent_walls_count = M
-
-    def set_player_positions(self, pos_player1, pos_player2):
-        self.player1 = pos_player1
-        self.player2 = pos_player2
 
     def read_initial_input(self):
         line = input().strip().split()
@@ -89,7 +85,6 @@ class LogicModel:
         if player_num == 1:
             current_pos = self.player1
             opponent_pos = self.player2
-            print(current_pos, opponent_pos)
         else:
             current_pos = self.player2
             opponent_pos = self.player1
@@ -295,17 +290,13 @@ class LogicModel:
         
         return 1.0 - (player1_distance / total_distance)
 
-    def make_move(self, new_pos, player_num):
-        
-        if player_num == 1:
-            old_pos = (self.player1[0], self.player1[1])
-        else:
-             old_pos = (self.player2[0], self.player2[1])
-
-        self.matrix[old_pos[0]][old_pos[1]] = 0
+    def make_move(self, new_pos):
         
         
-        print(new_pos)
+        self.matrix[self.player1[0]][self.player1[1]] = 0
+        
+        
+        self.player1 = new_pos
         self.matrix[new_pos[0]][new_pos[1]] = 1
 
     def make_wall_move(self, wall_type, row, col):
@@ -320,7 +311,7 @@ class LogicModel:
         
         for pos in self.get_valid_moves(1):
             temp_model = copy.deepcopy(self)
-            temp_model.make_move(pos, self.player1)
+            temp_model.make_move(pos)
             moves.append(('L', pos, temp_model))
         
         
@@ -331,3 +322,93 @@ class LogicModel:
                 moves.append(('F', (wall_type, row, col), temp_model))
         
         return moves
+
+class LogicController:
+    def __init__(self):
+        self.logic_model = LogicModel(5, 6)  
+        self.max_depth = 4
+        
+    def minimax(self, model, depth, maximizing_player, alpha, beta):
+        
+        if depth == 0 or model.is_game_over():
+            return model.evaluate_position()
+        
+        if maximizing_player:
+            max_eval = float('-inf')
+            for move_type, move_data, child_model in model.get_all_possible_moves():
+                eval_score = self.minimax(child_model, depth - 1, False, alpha, beta)
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            min_eval = float('inf')
+            eval_score = model.evaluate_position()
+            return eval_score
+
+    def find_best_move(self):
+        
+        best_score = float('-inf')
+        best_move = None
+
+        for move_type, move_data, child_model in self.logic_model.get_all_possible_moves():
+            score = self.minimax(child_model, self.max_depth - 1, False, float('-inf'), float('inf'))
+            if score > best_score:
+                best_score = score
+                best_move = (move_type, move_data)
+        
+        return best_move
+
+    def format_output(self, move_type, move_data):
+        
+        if move_type == 'L':
+            row, col = move_data
+            return f"L {row} {col}"
+        else:
+            wall_type, row, col = move_data
+            if wall_type == 'H':
+                return f"F {row} {col} {row} {col+2}"
+            else:
+                return f"F {row} {col} {row+2} {col}"
+
+    def start_game(self):
+        self.logic_model.read_initial_input()
+
+        best_move = self.find_best_move()
+        if best_move:
+            move_type, move_data = best_move
+            if move_type == "F":
+                self.logic_model.my_walls_count
+            output = self.format_output(move_type, move_data)
+            print(output)
+        else:
+            
+            valid_moves = self.logic_model.get_valid_moves(1)
+            if valid_moves:
+                pos = valid_moves[0]
+                print(f"L {pos[0]} {pos[1]}")
+        self.play_game()
+
+    def play_game(self):   
+        self.logic_model.read_move_input()
+        
+        best_move = self.find_best_move()
+        if best_move:
+            move_type, move_data = best_move
+            if move_type == "F":
+                self.logic_model.my_walls_count
+            output = self.format_output(move_type, move_data)
+            print(output)
+        else:
+            
+            valid_moves = self.logic_model.get_valid_moves(1)
+            if valid_moves:
+                pos = valid_moves[0]
+                print(f"L {pos[0]} {pos[1]}")
+
+        self.play_game()
+
+if __name__ == "__main__":
+    controller = LogicController()
+    controller.start_game()
