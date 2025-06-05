@@ -18,13 +18,38 @@ class LogicModel:
         self.player1 = None
         self.player2 = None
         
+        # Track wall counts for each player
+        self.player1_walls_count = M
+        self.player2_walls_count = M
         
+        # Legacy support (these point to player2's walls for backward compatibility)
         self.my_walls_count = M
         self.opponent_walls_count = M
 
     def set_player_positions(self, pos_player1, pos_player2):
         self.player1 = pos_player1
         self.player2 = pos_player2
+
+    def get_wall_count(self, player_num):
+        """Get remaining wall count for a player"""
+        if player_num == 1:
+            return self.player1_walls_count
+        else:
+            return self.player2_walls_count
+
+    def use_wall(self, player_num):
+        """Decrement wall count for a player"""
+        if player_num == 1:
+            if self.player1_walls_count > 0:
+                self.player1_walls_count -= 1
+                return True
+        else:
+            if self.player2_walls_count > 0:
+                self.player2_walls_count -= 1
+                # Update legacy counters
+                self.my_walls_count -= 1
+                return True
+        return False
 
     def read_initial_input(self):
         line = input().strip().split()
@@ -295,23 +320,53 @@ class LogicModel:
         
         return 1.0 - (player1_distance / total_distance)
 
+    def execute_move(self, player_num, move):
+        """Execute a move for the specified player"""
+        if move[0] == 'L':
+            # Location move: L x y
+            new_pos = (int(move[1]), int(move[2]))
+            self.make_move(new_pos, player_num)
+        elif move[0] == 'F':
+            # Fence/Wall move: F x1 y1 x2 y2
+            x1, y1, x2, y2 = int(move[1]), int(move[2]), int(move[3]), int(move[4])
+            
+            # Determine if it's horizontal or vertical wall
+            if x1 == x2:  # Same row, so it's a horizontal wall
+                wall_type = 'H'
+                # For horizontal walls, use the leftmost position
+                row, col = x1, min(y1, y2)
+            else:  # Same column, so it's a vertical wall
+                wall_type = 'V'
+                # For vertical walls, use the topmost position
+                row, col = min(x1, x2), y1
+            
+            # Check if player has walls remaining
+            if self.get_wall_count(player_num) > 0:
+                self.place_wall(wall_type, row, col)
+                self.use_wall(player_num)
+            else:
+                print(f"Warning: Player {player_num} tried to place wall but has no walls remaining!")
+
     def make_move(self, new_pos, player_num):
-        
+        """Move a player to a new position"""
         if player_num == 1:
-            old_pos = (self.player1[0], self.player1[1])
+            old_pos = self.player1
+            self.player1 = new_pos
         else:
-             old_pos = (self.player2[0], self.player2[1])
+            old_pos = self.player2
+            self.player2 = new_pos
 
+        # Clear old position and set new position in matrix
         self.matrix[old_pos[0]][old_pos[1]] = 0
-        
-        
-        print(new_pos)
-        self.matrix[new_pos[0]][new_pos[1]] = 1
+        self.matrix[new_pos[0]][new_pos[1]] = player_num
 
-    def make_wall_move(self, wall_type, row, col):
-        
-        self.place_wall(wall_type, row, col)
-        self.my_walls_count -= 1
+    def make_wall_move(self, wall_type, row, col, player_num=2):
+        """Place a wall for the specified player"""
+        if self.get_wall_count(player_num) > 0:
+            self.place_wall(wall_type, row, col)
+            self.use_wall(player_num)
+        else:
+            print(f"Warning: Player {player_num} has no walls remaining!")
 
     def get_all_possible_moves(self):
         
@@ -320,14 +375,14 @@ class LogicModel:
         
         for pos in self.get_valid_moves(1):
             temp_model = copy.deepcopy(self)
-            temp_model.make_move(pos, self.player1)
+            temp_model.make_move(pos, 1)
             moves.append(('L', pos, temp_model))
         
         
-        if self.my_walls_count > 0:
+        if self.player1_walls_count > 0:
             for wall_type, row, col in self.get_valid_walls():
                 temp_model = copy.deepcopy(self)
-                temp_model.make_wall_move(wall_type, row, col)
+                temp_model.make_wall_move(wall_type, row, col, 1)
                 moves.append(('F', (wall_type, row, col), temp_model))
         
         return moves

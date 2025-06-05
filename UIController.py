@@ -12,14 +12,11 @@ The board will have two parts:
 #EMPTY_WALL = 0
 #WALL = 9
 
-
 import pygame
 from dataclasses import dataclass
 from UIModel import UIModel
 from GameView import GameView
-from LogicModel import LogicModel
 from Constants import *
-from BotEngine import BotEngine
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
@@ -39,7 +36,14 @@ class UIController:
                                 self.UP_WALL_BAR_MIDDLE_LEFT_POINT, self.DOWN_WALL_BAR_MIDDLE_LEFT_POINT)
         self.game_view = GameView(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         
-        self.start_game()
+        # These will be set by GameController
+        self.logic_model = None
+        self.bot_engine = None
+
+    def set_game_dependencies(self, logic_model, bot_engine):
+        """Set references to game dependencies from GameController"""
+        self.logic_model = logic_model
+        self.bot_engine = bot_engine
 
     def compute_base_metrics(self):
         self.SCREEN_WIDTH = SCREEN_WIDTH
@@ -63,87 +67,24 @@ class UIController:
         self.UP_WALL_BAR_MIDDLE_LEFT_POINT = (self.TOP_LEFT_POINT[0], self.TOP_LEFT_POINT[1] / 2)
         self.DOWN_WALL_BAR_MIDDLE_LEFT_POINT = (self.TOP_LEFT_POINT[0], self.TOP_LEFT_POINT[1] + self.BOARD_WIDTH + self.TOP_LEFT_POINT[1] / 2)
 
-    def start_game(self):
-        #we need to initialize the matrix as empty
-        self.logic_model = LogicModel(self.N, self.M)
-        player1_pos, player2_pos = self.square_cordinates_ui_to_logic([self.ui_model.player1.pos, self.ui_model.player2.pos])
-        self.logic_model.set_player_positions(player1_pos, player2_pos)
-        self.bot_engine = BotEngine(self.logic_model)
-
-        self.active_player = PLAYER2
-
-        #render the window
-        self.show_board()
-        self.run_game()
-
-        #I need to decide who starts (I will make a random fucntion for this)
-        #I should notify the user with a message
-
-        #if bot starts
-            #run_game
-
-        #else
-            #waits for a move, returns the matrix
-            #run_game
-        pass
-
-
-    def run_game(self):
-        running = True
-        clock = pygame.time.Clock()
-
-
+    def initialize_game_loop(self):
+        """Initialize variables needed for the game loop"""
         self.dragging = False
         self.dragged_rect = None
         self.drag_offset = None
-
         self.screen = self.game_view.render_frame(self.ui_model)
 
-        while running:
-            running = self.check_quit_command() #check if the window was not closed
-            
-            if self.active_player == PLAYER1:
-                self.handle_UI_move()
-                self.active_player = PLAYER2
-            else:
-                self.handle_bot_move()
-                self.active_player = PLAYER1
+    def handle_UI_move(self):
+        mouse_pos = pygame.mouse.get_pos()
+        move_completed = False
+        running = True
 
-            self.game_view.render_frame(self.ui_model)
-
-            #self.make_a_move()
-
-            clock.tick(180)
-
-        pygame.quit()
-        pass
-
-    def check_quit_command(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False
-        return True
-
-    def handle_bot_move(self):
-        #based on the logic controller, choose a move (it has acces to the Logic Model)
-        #The move needs to be two types
-        # L 4 5 - move the PLAYER to the 4 5 position
-        # F 10 12 12 12 - place a WALL in the (10 12) (11 12) (11 12) cordinates              
-
-        #make the necessary modifications on the logicModel
-
-        #make the neccessary modification in the UI model
-        print("Bot is making a move")
-        print(self.bot_engine.make_a_move())
-
-    def handle_UI_move(self):
-        print("UI is making a move")
-        mouse_pos = pygame.mouse.get_pos()
-
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
+                running = False
+                break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 player_moved_in_this_round = False
-
 
                 #if move option was pressed
                 print(self.ui_model.player_move_options)
@@ -155,19 +96,17 @@ class UIController:
                         
                         self.ui_model.update_player_pos(option.pos, self.ui_model.player1)
                         player_moved_in_this_round = True
+                        move_completed = True
 
                 #reset the components
                 self.ui_model.player_move_options = []
 
-
                 #if a player was pressed
                 if self.ui_model.player1.rect.collidepoint(mouse_pos) and not player_moved_in_this_round:
-                    
                     cordinates = self.logic_model.get_valid_moves(self.ui_model.player1.num)
                     cordinates = self.square_cordinates_logic_to_ui(cordinates)
                     self.ui_model.add_player_move_options(cordinates)
                         
-
                 #if a wall is picked up
                 for wall in self.ui_model.bar_walls:
                     if wall.rect.collidepoint(mouse_pos):
@@ -192,22 +131,23 @@ class UIController:
                                     for x, y in cordinates:
                                         self.ui_model.walls[x][y].color = (0, 255, 0)
                                     self.dragged_rect.activated = False
-                                    
+                                    move_completed = True
                                 
                                 print("Mouse was released on:", wall.rect, i, j)
                     self.dragged_rect = None
                     self.dragging = False
                     self.ui_model.ghost_rect = None
-                    
-
-        
 
         # Draw dragged rect on top following mouse
         if self.dragging and self.dragged_rect:
             self.ui_model.ghost_rect = self.dragged_rect.rect.copy()
             self.ui_model.ghost_rect.topleft = (mouse_pos[0] - self.drag_offset[0], mouse_pos[1] - self.drag_offset[1])
 
-        #self.screen = self.game_view.render_frame(self.ui_model)
+        return running, move_completed
+
+    def render_frame(self):
+        """Render the current frame"""
+        self.game_view.render_frame(self.ui_model)
 
     def square_cordinates_logic_to_ui(self, cordinates):
         new_cordinates = []
@@ -280,7 +220,6 @@ class UIController:
                         #I need to tranform the indexes
                         #ti = (i - 1) // 2 * 3 + 2
                         
-
                         ti = (i // 2) * 3
                         tj = (j - 1) // 2 * 3 + 2
                         #
@@ -310,6 +249,5 @@ class UIController:
 
                             print('harmadik', i, j, ti, tj)
 
-        
-
-board = UIController(5, 10)
+# Remove the instantiation from here - it should be done in GameController
+# board = UIController(5, 10)
