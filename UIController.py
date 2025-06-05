@@ -5,12 +5,12 @@ The board will have two parts:
 -the walls
 """
 
-#CODES
-PLAYER1 = 1
-PLAYER2 = 2
-EMPTY_SQUARE = 0
-EMPTY_WALL = 0
-WALL = 9
+#CODES#
+#PLAYER1 = 1
+#PLAYER2 = 2
+#EMPTY_SQUARE = 0
+#EMPTY_WALL = 0
+#WALL = 9
 
 
 import pygame
@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from UIModel import UIModel
 from GameView import GameView
 from LogicModel import LogicModel
+from Constants import *
+from BotEngine import BotEngine
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
@@ -66,6 +68,9 @@ class UIController:
         self.logic_model = LogicModel(self.N, self.M)
         player1_pos, player2_pos = self.square_cordinates_ui_to_logic([self.ui_model.player1.pos, self.ui_model.player2.pos])
         self.logic_model.set_player_positions(player1_pos, player2_pos)
+        self.bot_engine = BotEngine(self.logic_model)
+
+        self.active_player = PLAYER2
 
         #render the window
         self.show_board()
@@ -95,33 +100,48 @@ class UIController:
         self.screen = self.game_view.render_frame(self.ui_model)
 
         while running:
-            #running = self.handle_events() #check if the window was not closed
+            running = self.check_quit_command() #check if the window was not closed
+            
+            if self.active_player == PLAYER1:
+                self.handle_UI_move()
+                self.active_player = PLAYER2
+            else:
+                self.handle_bot_move()
+                self.active_player = PLAYER1
 
-            self.make_a_move()
+            self.game_view.render_frame(self.ui_model)
 
-            #sends the current matrix
-            #self.update_game_state()       #returns the matrix, with the modifications of the opponent
-
-            #transforms the matrix into ui_model
-
-            #self.game_view.render_frame(self.ui_model)    #shows the modifications to the user
-
-            #makes the table active, is waiting for a move, returns the matrix
-
+            #self.make_a_move()
 
             clock.tick(180)
 
         pygame.quit()
         pass
 
-    def make_a_move(self):
+    def check_quit_command(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+        return True
+
+    def handle_bot_move(self):
+        #based on the logic controller, choose a move (it has acces to the Logic Model)
+        #The move needs to be two types
+        # L 4 5 - move the PLAYER to the 4 5 position
+        # F 10 12 12 12 - place a WALL in the (10 12) (11 12) (11 12) cordinates              
+
+        #make the necessary modifications on the logicModel
+
+        #make the neccessary modification in the UI model
+        print("Bot is making a move")
+        print(self.bot_engine.make_a_move())
+
+    def handle_UI_move(self):
+        print("UI is making a move")
         mouse_pos = pygame.mouse.get_pos()
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 player_moved_in_this_round = False
 
 
@@ -187,7 +207,7 @@ class UIController:
             self.ui_model.ghost_rect = self.dragged_rect.rect.copy()
             self.ui_model.ghost_rect.topleft = (mouse_pos[0] - self.drag_offset[0], mouse_pos[1] - self.drag_offset[1])
 
-        self.screen = self.game_view.render_frame(self.ui_model)
+        #self.screen = self.game_view.render_frame(self.ui_model)
 
     def square_cordinates_logic_to_ui(self, cordinates):
         new_cordinates = []
